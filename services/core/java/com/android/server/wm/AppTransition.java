@@ -85,11 +85,13 @@ import android.annotation.Nullable;
 import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContentResolver;
 import android.content.res.Configuration;
 import android.content.res.ResourceId;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
 import android.content.res.TypedArray;
+import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -107,6 +109,7 @@ import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
+import android.provider.Settings;
 import android.util.ArraySet;
 import android.util.Slog;
 import android.util.SparseArray;
@@ -249,6 +252,8 @@ public class AppTransition implements Dump {
 
     private final int mClipRevealTranslationY;
 
+    private SettingsObserver mSettingsObserver;
+
     private int mCurrentUserId = 0;
     private long mLastClipRevealTransitionDuration = DEFAULT_APP_TRANSITION_DURATION;
 
@@ -273,6 +278,13 @@ public class AppTransition implements Dump {
         mService = service;
         mHandler = new Handler(service.mH.getLooper());
         mDisplayContent = displayContent;
+        final boolean isDefaultDisplay = displayContent.isDefaultDisplay;
+        if (isDefaultDisplay) {
+            mSettingsObserver = new SettingsObserver(new Handler());
+            mSettingsObserver.observe();
+            updateSettings();
+        }
+
         mLinearOutSlowInInterpolator = AnimationUtils.loadInterpolator(context,
                 com.android.internal.R.interpolator.linear_out_slow_in);
         mFastOutLinearInInterpolator = AnimationUtils.loadInterpolator(context,
